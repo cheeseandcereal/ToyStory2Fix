@@ -1,5 +1,9 @@
 # Licenses
 
+Source: <https://github.com/cheeseandcereal/ToyStory2Fix>.
+
+This is a modified ToyStory2Fix distribution, based on RibShark's project and AndetSTK's fork. Original copyrights remain with their respective authors.
+
 ## Toy Story 2 Fix
 Copyright (C) 2018  RibShark
 
