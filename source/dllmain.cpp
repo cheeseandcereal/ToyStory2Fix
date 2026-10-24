@@ -147,6 +147,28 @@ DWORD WINAPI Init(LPVOID bDelay)
     pattern = hook::pattern("E8 ? ? ? ? 8D 44 24 00 8D 4C 24 04 50 51 E8"); //412B9B
     injector::MakeCALL(pattern.get_first(0), Display::SelectDevice);
 
+    /* Render at a fixed size into a borderless fullscreen or resizable window */
+    Display::fullscreen = iniReader.ReadBoolean(INI_KEY, "Fullscreen", true);
+    Display::width = iniReader.ReadInteger(INI_KEY, "ResolutionWidth", 0); // "auto" reads as 0
+    Display::height = iniReader.ReadInteger(INI_KEY, "ResolutionHeight", 0);
+    SetProcessDPIAware();
+    pattern = hook::pattern("6A 51 52 50 8B 08 FF 51 50"); //408DE2
+    injector::WriteMemory<uint8_t>(pattern.get_first(1), DDSCL_NORMAL, true); // no exclusive mode while enumerating
+    pattern = hook::pattern("8B 0D ? ? ? ? 6A 03 51 FF 15"); //412CA4
+    injector::WriteMemory<uint8_t>(pattern.get_first(7), SW_SHOW, true); // SW_MAXIMIZE would override the window placement
+    pattern = hook::pattern("8D 46 20 50 8B 06 50 FF D5"); //4AF25E
+    char sourceRect[] = {0x56, 0xE8, 0, 0, 0, 0, 0x83, 0xC4, 0x04}; // push esi (context); call SetSourceRect; add esp, 4
+    injector::WriteMemoryRaw(pattern.get_first(0), sourceRect, sizeof(sourceRect), true);
+    injector::MakeCALL(pattern.get_first(1), Display::SetSourceRect);
+    pattern = hook::pattern("8B 44 24 14 50 51 E8 ? ? ? ? 83 C4 14 85 C0"); //412CC6
+    Display::initDisplay = injector::MakeCALL(pattern.get_first(6), Display::InitDisplay).get();
+    pattern = hook::pattern("8B 0D ? ? ? ? E9 ? ? ? ? 90 90 90 90 90 8B 0D ? ? ? ? E9"); //4ABD30
+    Display::context = *pattern.get_first<uint8_t**>(2);
+    if (!Display::fullscreen) {
+        pattern = hook::pattern("8B 35 ? ? ? ? 6A 00 FF D6 85 C0 7C 08 6A 00 FF D6 85 C0 7D F8"); //412E49
+        injector::WriteMemory<uint16_t>(pattern.get_first(0), 0x14EB, true); // jmp over the ShowCursor(FALSE) loop: windowed mode keeps the cursor
+    }
+
     /* Fix "Unable to enumerate a suitable device - thanks hdc0 */
     if (iniReader.ReadBoolean(INI_KEY, "IgnoreVRAM", true)) {
         pattern = hook::pattern("74 44 8B 8A 50 01 00 00 8B 91 64 03 00 00"); //4ACAC2
