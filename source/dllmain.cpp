@@ -1,5 +1,6 @@
 #include "stdafx.h"
 #include <mmsystem.h>
+#include <cfloat>
 
 uintptr_t sub_490860_addr;
 uintptr_t sub_49D910_addr;
@@ -153,8 +154,9 @@ DWORD WINAPI Init(LPVOID bDelay)
     if (iniReader.ReadBoolean(INI_KEY, "IncreaseRenderDistance", true)) {
         pattern = hook::pattern("D9 44 24 04 D8 4C 24 04 D9 1D"); //4BC410
         float** flt_5088B0_addr = (float**)pattern.get_first(10);
-        **flt_5088B0_addr = INFINITY;
-        injector::MakeNOP(pattern.get_first(8), 6);
+        **flt_5088B0_addr = sqrtf(FLT_MAX); // large but finite, so later arithmetic cannot produce NaN
+        injector::WriteMemory<uint16_t>(pattern.get_first(8), 0xD8DD, true); // fstp st(0): pop instead of storing, keeps the x87 stack balanced
+        injector::MakeNOP(pattern.get_first(10), 4);
     }
 
     /* Fix widescreen once game loop begins */
