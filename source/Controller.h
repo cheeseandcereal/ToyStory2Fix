@@ -136,4 +136,20 @@ namespace Controller
         static const char* names[] = {"dpad up", "dpad right", "dpad down", "dpad left"};
         return key >= DpadUp && key <= DpadLeft ? names[key - DpadUp] : bindingName(key);
     }
+
+    uint16_t* pauseSelection; // highlighted item of the pause menu
+    void (__cdecl* updateGameInput)(); // derives the frame's gameplay input from the actions; presses are edges against the previous frame
+
+    // Cancel on the pause menu's main page selects continue, without firing the actions that share its button when play resumes
+    struct PauseCancel
+    {
+        void operator()(injector::reg_pack& regs)
+        {
+            if (regs.ecx) { // cancel was pressed
+                regs.edx &= ~0xFFFFu; // dx: the item to act on
+                *pauseSelection = 0;
+                updateGameInput();
+            }
+        }
+    };
 }

@@ -346,6 +346,14 @@ DWORD WINAPI Init(LPVOID bDelay)
         pattern = hook::pattern("75 ? 68 ? ? ? ? 68 ? 00 00 00 68 A0 00 00 00 E8 ? ? ? ? 68 00 06 00 00 6A 01 53 68 ? ? ? ? 68 ? 00 00 00"); //49C6D6
         injector::WriteMemory(pattern.get_first(3), "ABto select, jump to change", true); // AB are the game's arrow glyphs
         injector::WriteMemory(pattern.get_first(31), "menu to accept, esc to cancel", true);
+
+        // Cancel on the pause menu's main page selects continue
+        pattern = hook::pattern("3B CE 74 09 66 89 35 ? ? ? ? EB 05 66 3B D6 75 46"); //49F96C
+        Controller::pauseSelection = *pattern.get_first<uint16_t*>(7);
+        pattern = hook::pattern("E8 ? ? ? ? F6 05 ? ? ? ? 04 75 13"); //49E103
+        Controller::updateGameInput = injector::GetBranchDestination(pattern.get_first(0)).get();
+        pattern = hook::pattern("3B CE 0F 85 ? ? ? ? 66 3B D6 75 46"); //49F5EC
+        injector::MakeInline<Controller::PauseCancel>(pattern.get_first(0), pattern.get_first(8)); // cmp ecx,esi; jne (do nothing)
     }
 
     return 0;
