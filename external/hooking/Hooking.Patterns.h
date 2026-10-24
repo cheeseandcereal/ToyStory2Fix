@@ -10,6 +10,7 @@
 #define PATTERNS_USE_HINTS 0
 
 #include <cassert>
+#include <string>
 #include <vector>
 
 namespace hook
@@ -90,7 +91,7 @@ namespace hook
 
     protected:
         inline pattern(void* module)
-            : m_module(module), m_rangeEnd(0), m_matched(false)
+            : m_rangeStart(reinterpret_cast<uintptr_t>(module)), m_rangeEnd(0), m_matched(false)
         {
         }
 
@@ -117,16 +118,16 @@ namespace hook
         {
         }
 
-        pattern(const char *pattern)
+        pattern(const char *pattern_string)
             : pattern(getRVA<void>(0))
         {
-            Initialize(pattern);
+            Initialize(pattern_string);
         }
 
-        pattern(std::string& pattern)
+        pattern(std::string& pattern_string)
             : pattern(getRVA<void>(0))
         {
-            Initialize(pattern.c_str());
+            Initialize(pattern_string.c_str());
         }
 
         inline pattern& count(uint32_t expected)
@@ -203,16 +204,16 @@ namespace hook
         : public pattern
     {
     public:
-        module_pattern(void* module, const char *pattern)
+        module_pattern(void* module, const char *pattern_string)
             : pattern(module)
         {
-            Initialize(pattern);
+            Initialize(pattern_string);
         }
 
-        module_pattern(void* module, std::string& pattern)
+        module_pattern(void* module, std::string& pattern_string)
             : pattern(module)
         {
-            Initialize(pattern.c_str());
+            Initialize(pattern_string.c_str());
         }
     };
 
@@ -220,16 +221,16 @@ namespace hook
         : public pattern
     {
     public:
-        range_pattern(uintptr_t begin, uintptr_t end, const char *pattern)
+        range_pattern(uintptr_t begin, uintptr_t end, const char *pattern_string)
             : pattern(begin, end)
         {
-            Initialize(pattern);
+            Initialize(pattern_string);
         }
 
-        range_pattern(uintptr_t begin, uintptr_t end, std::string& pattern)
+        range_pattern(uintptr_t begin, uintptr_t end, std::string& pattern_string)
             : pattern(begin, end)
         {
-            Initialize(pattern.c_str());
+            Initialize(pattern_string.c_str());
         }
     };
 
