@@ -1,5 +1,5 @@
 #include "stdafx.h"
-#include <MMSystem.h>
+#include <mmsystem.h>
 
 uintptr_t sub_490860_addr;
 uintptr_t sub_49D910_addr;
