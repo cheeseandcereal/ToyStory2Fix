@@ -301,6 +301,16 @@ DWORD WINAPI Init(LPVOID bDelay)
         Controller::actions = *pattern.get_first<uint16_t*>(3);
         pattern = hook::pattern("68 ? ? ? ? 6A 50 50 8B 08 FF 51 24"); //414C47
         injector::MakeCALL(pattern.get_first(8), Controller::ReadJoystick); // replaces mov ecx,[eax]; call [ecx+24h] (GetDeviceState)
+
+        // Default bindings: Cancel on button 1 (shared with Laser), Menu on Start (button 7), camera on the right stick instead of buttons 6/7
+        pattern = hook::pattern("68 00 10 00 00 68 09 04 00 00 E8"); //414FF8
+        injector::WriteMemory<uint32_t>(pattern.get_first(6), 0x401, true);
+        pattern = hook::pattern("6A 08 68 08 04 00 00 E8"); //41507F
+        injector::WriteMemory<uint32_t>(pattern.get_first(3), 0x407, true);
+        pattern = hook::pattern("68 00 02 00 00 68 07 04 00 00 E8"); //415037
+        injector::WriteMemory<int32_t>(pattern.get_first(6), -1, true);
+        pattern = hook::pattern("68 00 01 00 00 68 06 04 00 00 E8"); //415046
+        injector::WriteMemory<int32_t>(pattern.get_first(6), -1, true);
     }
 
     return 0;
