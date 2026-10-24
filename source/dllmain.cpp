@@ -1,5 +1,6 @@
 #include "stdafx.h"
 #include "Display.h"
+#include "Controller.h"
 #include <mmsystem.h>
 #include <shellapi.h>
 #include <cfloat>
@@ -292,6 +293,14 @@ DWORD WINAPI Init(LPVOID bDelay)
         pattern = hook::pattern("C7 05 ? ? ? ? 00 00 00 00 8B 6C 24 48 8B C3 0F AF C6"); //403FB3
         injector::WriteMemory<uint16_t>(pattern.get_first(0), 0x2583, true); // mov dword [x], 0 -> and dword [x], 0 (3 bytes shorter)
         injector::WriteMemory<uint32_t>(pattern.get_first(6), 0x90DFF700, true); // imm8 0; neg edi (manual pitch delta); nop
+    }
+
+    /* Better controller support */
+    if (iniReader.ReadBoolean(INI_KEY, "EnhancedControllerSupport", true)) {
+        pattern = hook::pattern("66 8B 3D ? ? ? ? BB C0 2B 00 00"); //414C6E
+        Controller::actions = *pattern.get_first<uint16_t*>(3);
+        pattern = hook::pattern("68 ? ? ? ? 6A 50 50 8B 08 FF 51 24"); //414C47
+        injector::MakeCALL(pattern.get_first(8), Controller::ReadJoystick); // replaces mov ecx,[eax]; call [ecx+24h] (GetDeviceState)
     }
 
     return 0;
