@@ -179,6 +179,10 @@ DWORD WINAPI Init(LPVOID bDelay)
         pattern = hook::pattern("8B 35 ? ? ? ? 6A 00 FF D6 85 C0 7C 08 6A 00 FF D6 85 C0 7D F8"); //412E49
         injector::WriteMemory<uint16_t>(pattern.get_first(0), 0x14EB, true); // jmp over the ShowCursor(FALSE) loop: windowed mode keeps the cursor
     }
+    pattern = hook::pattern("8D 44 24 0C 57 50 C7 44 24 14 7C 00 00 00 E8 ? ? ? ? 8B 4C 24 38"); //4BCE06
+    injector::MakeCALL(pattern.get_first(14), Display::DescribePrimary); // primary Lock -> GetSurfaceDesc
+    pattern = hook::pattern("E8 ? ? ? ? 8B 0D ? ? ? ? 8B 15 ? ? ? ? 89 2D ? ? ? ? 89 35 ? ? ? ? 89 3D"); //4BCEAF
+    injector::MakeNOP(pattern.get_first(0), 5); // the matching Unlock
 
     /* Fix "Unable to enumerate a suitable device - thanks hdc0 */
     if (iniReader.ReadBoolean(INI_KEY, "IgnoreVRAM", true)) {

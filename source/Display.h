@@ -104,4 +104,11 @@ namespace Display
     {
         *(RECT*)(context + 0x20) = { 0, 0, width, height };
     }
+
+    // Replaces the primary surface Lock in the game's pixel format query, which only reads the description
+    // This fixes flickering during certain in-game screen transitions when using wine + d7vk
+    int __cdecl DescribePrimary(DDSURFACEDESC2* description)
+    {
+        return (*(IDirectDrawSurface4**)(*context + 0x30))->GetSurfaceDesc(description);
+    }
 }
