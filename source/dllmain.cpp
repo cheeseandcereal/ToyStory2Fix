@@ -287,6 +287,13 @@ DWORD WINAPI Init(LPVOID bDelay)
         injector::MakeCALL(zurgZJump.get_first(0), zurgZFix);
     }
 
+    /* Make first-person Up look up and Down look down */
+    if (iniReader.ReadBoolean(INI_KEY, "UninvertCamera", true)) {
+        pattern = hook::pattern("C7 05 ? ? ? ? 00 00 00 00 8B 6C 24 48 8B C3 0F AF C6"); //403FB3
+        injector::WriteMemory<uint16_t>(pattern.get_first(0), 0x2583, true); // mov dword [x], 0 -> and dword [x], 0 (3 bytes shorter)
+        injector::WriteMemory<uint32_t>(pattern.get_first(6), 0x90DFF700, true); // imm8 0; neg edi (manual pitch delta); nop
+    }
+
     return 0;
 }
 
