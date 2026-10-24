@@ -343,6 +343,9 @@ DWORD WINAPI Init(LPVOID bDelay)
         hook::range_pattern(configure, configure + 0x600, "E8 ? ? ? ? 83 C4 04 84 C0").for_each_result([](const hook::pattern_match& match) {
             Controller::keyPressed = injector::MakeCALL(match.get<void>(), Controller::KeyPressed).get(); // the menu's five key checks
         });
+        pattern = hook::pattern("75 ? 68 ? ? ? ? 68 ? 00 00 00 68 A0 00 00 00 E8 ? ? ? ? 68 00 06 00 00 6A 01 53 68 ? ? ? ? 68 ? 00 00 00"); //49C6D6
+        injector::WriteMemory(pattern.get_first(3), "ABto select, jump to change", true); // AB are the game's arrow glyphs
+        injector::WriteMemory(pattern.get_first(31), "menu to accept, esc to cancel", true);
     }
 
     return 0;
