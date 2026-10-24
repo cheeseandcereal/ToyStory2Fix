@@ -218,6 +218,7 @@ public:
         catch (...) {
             return bolDefaultValue;
         }
+        return bolDefaultValue;
     }
 
     char* ReadString(char* szSection, char* szKey, const char* szDefaultValue)
