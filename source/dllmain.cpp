@@ -331,6 +331,18 @@ DWORD WINAPI Init(LPVOID bDelay)
         // Rebinding replaces only the selected action's key, so several actions can share a key or button
         pattern = hook::pattern("50 E8 ? ? ? ? 56 E8 ? ? ? ? 8B 0D ? ? ? ? C7 05"); //49C9B5
         injector::MakeNOP(pattern.get_first(7), 5); // call that removed the key from every binding
+
+        // Operate the controls menu with the controller
+        pattern = hook::pattern("89 15 ? ? ? ? 7D 0D BA 80 00 00 00"); //414DA7
+        Controller::directions = *pattern.get_first<uint32_t*>(2);
+        pattern = hook::pattern("39 1D ? ? ? ? 0F 85 D8 01 00 00"); //49C73F
+        Controller::capturing = *pattern.get_first<uint32_t*>(2);
+        pattern = hook::pattern("3B E8 75 09 E8 ? ? ? ? 89 44 24 ?"); //43777E; the stack slot differs between regional builds
+        Controller::configure = injector::MakeCALL(pattern.get_first(4), Controller::Configure).get();
+        uintptr_t configure = (uintptr_t)Controller::configure; //49C420
+        hook::range_pattern(configure, configure + 0x600, "E8 ? ? ? ? 83 C4 04 84 C0").for_each_result([](const hook::pattern_match& match) {
+            Controller::keyPressed = injector::MakeCALL(match.get<void>(), Controller::KeyPressed).get(); // the menu's five key checks
+        });
     }
 
     return 0;
