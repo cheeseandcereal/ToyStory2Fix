@@ -327,6 +327,10 @@ DWORD WINAPI Init(LPVOID bDelay)
         Controller::capture = injector::MakeCALL(pattern.get_first(0), Controller::Capture).get();
         pattern = hook::pattern("50 E8 ? ? ? ? 8B ? 24 18 8B F8 A1"); //49C4EF; the register differs between regional builds
         Controller::bindingName = injector::MakeCALL(pattern.get_first(1), Controller::BindingName).get();
+
+        // Rebinding replaces only the selected action's key, so several actions can share a key or button
+        pattern = hook::pattern("50 E8 ? ? ? ? 56 E8 ? ? ? ? 8B 0D ? ? ? ? C7 05"); //49C9B5
+        injector::MakeNOP(pattern.get_first(7), 5); // call that removed the key from every binding
     }
 
     return 0;
