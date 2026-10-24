@@ -13,7 +13,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent
 SOURCES = ["source/dllmain.cpp", "includes/stdafx.cpp", "external/hooking/Hooking.Patterns.cpp"]
 INCLUDES = ["includes", "external/hooking", "external/injector/include", "external/inireader"]
-LIBRARIES = ["kernel32", "user32", "winmm"]
+LIBRARIES = ["kernel32", "user32", "shell32", "winmm"]
 PACKAGE = ["dsound.dll", "dsound.ini", "scripts/ToyStory2Fix.asi", "scripts/ToyStory2Fix.ini"]
 
 

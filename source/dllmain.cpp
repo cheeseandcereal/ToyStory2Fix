@@ -1,6 +1,7 @@
 #include "stdafx.h"
 #include "Display.h"
 #include <mmsystem.h>
+#include <shellapi.h>
 #include <cfloat>
 
 uintptr_t sub_490860_addr;
@@ -151,6 +152,15 @@ DWORD WINAPI Init(LPVOID bDelay)
     Display::fullscreen = iniReader.ReadBoolean(INI_KEY, "Fullscreen", true);
     Display::width = iniReader.ReadInteger(INI_KEY, "ResolutionWidth", 0); // "auto" reads as 0
     Display::height = iniReader.ReadInteger(INI_KEY, "ResolutionHeight", 0);
+    int argc;
+    LPWSTR* argv = CommandLineToArgvW(GetCommandLineW(), &argc); // --fullscreen, --windowed, -w N, -h N override the INI
+    for (int i = 1; i < argc; i++) {
+        if (!_wcsicmp(argv[i], L"--fullscreen")) Display::fullscreen = true;
+        else if (!_wcsicmp(argv[i], L"--windowed")) Display::fullscreen = false;
+        else if (!_wcsicmp(argv[i], L"-w") && i + 1 < argc) Display::width = _wtoi(argv[++i]);
+        else if (!_wcsicmp(argv[i], L"-h") && i + 1 < argc) Display::height = _wtoi(argv[++i]);
+    }
+    LocalFree(argv);
     SetProcessDPIAware();
     pattern = hook::pattern("6A 51 52 50 8B 08 FF 51 50"); //408DE2
     injector::WriteMemory<uint8_t>(pattern.get_first(1), DDSCL_NORMAL, true); // no exclusive mode while enumerating
