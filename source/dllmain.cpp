@@ -1,4 +1,5 @@
 #include "stdafx.h"
+#include "Display.h"
 #include <mmsystem.h>
 #include <cfloat>
 
@@ -134,10 +135,17 @@ DWORD WINAPI Init(LPVOID bDelay)
 
 
     /* Allow 32-bit modes regardless of registry settings - thanks hdc0 */
-    if (iniReader.ReadBoolean(INI_KEY, "Allow32Bit", true)) {
-        pattern = hook::pattern("74 0B 5E 5D B8 01 00 00 00"); //4ACA44
-        injector::WriteMemory<uint8_t>(pattern.get_first(0), '\xEB', true);
-    }
+    // Always on: automatic device selection needs the desktop's 32-bit modes enumerated
+    pattern = hook::pattern("74 0B 5E 5D B8 01 00 00 00"); //4ACA44
+    injector::WriteMemory<uint8_t>(pattern.get_first(0), '\xEB', true);
+
+    /* Skip the graphics picker and select a device automatically */
+    pattern = hook::pattern("A1 ? ? ? ? B9 ? ? ? ? 85 C0 74 10 8D 88 80 03 00 00"); //4AC6FD
+    Display::drivers = *pattern.get_first<Display::Driver**>(1);
+    pattern = hook::pattern("8B 0D ? ? ? ? 85 C9 75 06 B8 01 00 00 81"); //4ACFC0
+    Display::selectedDriver = *pattern.get_first<Display::Driver**>(2);
+    pattern = hook::pattern("E8 ? ? ? ? 8D 44 24 00 8D 4C 24 04 50 51 E8"); //412B9B
+    injector::MakeCALL(pattern.get_first(0), Display::SelectDevice);
 
     /* Fix "Unable to enumerate a suitable device - thanks hdc0 */
     if (iniReader.ReadBoolean(INI_KEY, "IgnoreVRAM", true)) {
