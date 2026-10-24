@@ -16,10 +16,25 @@ struct Variables
     uint32_t nHeight;
     float fAspectRatio;
     float fScaleValue;
-    float f2DScaleValue;
     uint32_t* speedMultiplier;
     bool* isDemoMode;
 } Variables;
+
+namespace Sky
+{
+    float* imageWidth; // the level's sky image width; a tile spans textureWidth / imageWidth of the screen width
+    float narrowing = 1.0f; // (4/3) / (width / height)
+    float tileDivisor, scroll; // read by the game: imageWidth adjusted for the tile width, screen widths scrolled per full turn
+    const float pitchDivisor = 0.75f * 3.0f / (4.0f * (float)M_PI); // replaces aspect * 3/(4 pi): the vertical view is unchanged
+    void (__cdecl* update)(int pitch, int yaw);
+
+    void __cdecl Update(int pitch, int yaw)
+    {
+        tileDivisor = *imageWidth / narrowing;
+        scroll = 4.0f * (float)M_PI / 3.0f * narrowing;
+        update(pitch, yaw);
+    }
+}
 
 void UpdateElapsedMicroseconds() {
     QueryPerformanceCounter(&CurrentTime);
@@ -66,23 +81,16 @@ int sub_49D910() {
 
     /* Set width and height */
     auto pattern = hook::pattern("8B 15 ? ? ? ? 89 4C 24 08 89 44 24 0C"); //4B5672
-    Variables.nWidth = *(int*)pattern.get_first(2);
-    Variables.nHeight = *((int*)pattern.get_first(2) + 4);
+    uint32_t* resolution = *(uint32_t**)pattern.get_first(2); // width, height
+    Variables.nWidth = resolution[0];
+    Variables.nHeight = resolution[1];
     Variables.fAspectRatio = float(Variables.nWidth) / float(Variables.nHeight);
     Variables.fScaleValue = 1.0f / Variables.fAspectRatio;
-    Variables.f2DScaleValue = (4.0f / 3.0f) / Variables.fAspectRatio;
+    Sky::narrowing = (4.0f / 3.0f) / Variables.fAspectRatio;
 
     /* Fix 3D stretch */
     pattern = hook::pattern("C7 40 44 00 00 40 3F"); //4CE80F
-    struct Widescreen3DHook
-    {
-        void operator()(injector::reg_pack& regs)
-        {
-            float* ptrScaleValue = (float*)regs.eax + 0x44;
-            *ptrScaleValue = Variables.fScaleValue;
-        }
-    }; injector::MakeInline<Widescreen3DHook>(pattern.get_first(0), pattern.get_first(6));
-
+    injector::WriteMemory<float>(pattern.get_first(3), Variables.fScaleValue, true); // mov [eax+44h], 0.75 -> height/width
 
     return _sub_49D910();
 }
@@ -164,6 +172,19 @@ DWORD WINAPI Init(LPVOID bDelay)
         pattern = hook::pattern("8D 44 24 10 50 57 E8 ? ? ? ? 83"); //4317EC
         sub_49D910_addr = ((uintptr_t)pattern.get_first(11) + *pattern.get_first<uintptr_t>(7));
         injector::MakeCALL(pattern.get_first(6), sub_49D910);
+
+        // Sky backdrop: tile width, scroll per turn and pitch divisor as on a 4:3 screen of the same height
+        pattern = hook::pattern("D8 35 ? ? ? ? 8B 10 83 C4 18"); //48F295
+        Sky::imageWidth = *pattern.get_first<float*>(2);
+        injector::WriteMemory(pattern.get_first(2), &Sky::tileDivisor, true); // fdiv [imageWidth]
+        pattern = hook::pattern("D8 0D ? ? ? ? D9 1D ? ? ? ? D9 05 ? ? ? ? D8 05"); //48F323
+        injector::WriteMemory(pattern.get_first(2), &Sky::scroll, true); // fmul [4 pi / 3]
+        pattern = hook::pattern("D9 42 44 D8 0D ? ? ? ? D8 3D ? ? ? ? DB 05"); //48F3B4
+        injector::WriteMemory<uint16_t>(pattern.get_first(0), 0x05D9, true); // fld [camera aspect]; fmul [3 / (4 pi)] -> fld [pitchDivisor]
+        injector::WriteMemory(pattern.get_first(2), &Sky::pitchDivisor, true);
+        injector::MakeNOP(pattern.get_first(6), 3);
+        pattern = hook::pattern("50 51 E8 ? ? ? ? 6A 00 E8 ? ? ? ? 6A 01 E8"); //441250
+        Sky::update = injector::MakeCALL(pattern.get_first(2), Sky::Update).get();
     }
 
     /* Fix texture-mapping bugs */
