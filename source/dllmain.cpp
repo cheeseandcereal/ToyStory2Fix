@@ -210,6 +210,8 @@ DWORD WINAPI Init(LPVOID bDelay)
         **flt_5088B0_addr = sqrtf(FLT_MAX); // large but finite, so later arithmetic cannot produce NaN
         injector::WriteMemory<uint16_t>(pattern.get_first(8), 0xD8DD, true); // fstp st(0): pop instead of storing, keeps the x87 stack balanced
         injector::MakeNOP(pattern.get_first(10), 4);
+        pattern = hook::pattern("8B 44 24 04 83 F8 02 7F 08 85 C0 7D 09"); //4CDD10
+        injector::WriteMemory<uint8_t>(pattern.get_first(7), 0xEB, true); // jg -> jmp: force high detail level regardless of saved graphics setting
     }
 
     /* Fix widescreen once game loop begins */
