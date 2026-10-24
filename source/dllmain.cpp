@@ -299,7 +299,12 @@ DWORD WINAPI Init(LPVOID bDelay)
     if (iniReader.ReadBoolean(INI_KEY, "EnhancedControllerSupport", true)) {
         pattern = hook::pattern("66 8B 3D ? ? ? ? BB C0 2B 00 00"); //414C6E
         Controller::actions = *pattern.get_first<uint16_t*>(3);
+        pattern = hook::pattern("B9 ? ? ? ? 8B 31 81 FE 00 04 00 00 7C 15"); //414C91
+        Controller::bindings = *pattern.get_first<Controller::Binding*>(1);
+        pattern = hook::pattern("A3 ? ? ? ? 89 0D ? ? ? ? 66 89 3D ? ? ? ? 5F 5E 5D 5B C3"); //414DF4
+        Controller::movement = *pattern.get_first<int32_t*>(1);
         pattern = hook::pattern("68 ? ? ? ? 6A 50 50 8B 08 FF 51 24"); //414C47
+        Controller::joystick = *pattern.get_first<DIJOYSTATE*>(1);
         injector::MakeCALL(pattern.get_first(8), Controller::ReadJoystick); // replaces mov ecx,[eax]; call [ecx+24h] (GetDeviceState)
 
         // Default bindings: Cancel on button 1 (shared with Laser), Menu on Start (button 7), camera on the right stick instead of buttons 6/7
@@ -311,6 +316,17 @@ DWORD WINAPI Init(LPVOID bDelay)
         injector::WriteMemory<int32_t>(pattern.get_first(6), -1, true);
         pattern = hook::pattern("68 00 01 00 00 68 06 04 00 00 E8"); //415046
         injector::WriteMemory<int32_t>(pattern.get_first(6), -1, true);
+
+        // D-pad: bindable in the controls menu, defaults to the directions by reusing the duplicate arrow key defaults
+        pattern = hook::pattern("83 C4 40 6A 10 68 C8 00 00 00 E8 ? ? ? ? 6A 40 68 D0 00 00 00 E8 ? ? ? ? 68 80 00 00 00 68 CB 00 00 00 E8 ? ? ? ? 6A 20 68 CD 00 00 00 E8"); //41508B
+        injector::WriteMemory<uint32_t>(pattern.get_first(6), Controller::DpadUp, true);
+        injector::WriteMemory<uint32_t>(pattern.get_first(18), Controller::DpadDown, true);
+        injector::WriteMemory<uint32_t>(pattern.get_first(33), Controller::DpadLeft, true);
+        injector::WriteMemory<uint32_t>(pattern.get_first(45), Controller::DpadRight, true);
+        pattern = hook::pattern("E8 ? ? ? ? 8B F0 83 FE FF 0F 84"); //49C923
+        Controller::capture = injector::MakeCALL(pattern.get_first(0), Controller::Capture).get();
+        pattern = hook::pattern("50 E8 ? ? ? ? 8B ? 24 18 8B F8 A1"); //49C4EF; the register differs between regional builds
+        Controller::bindingName = injector::MakeCALL(pattern.get_first(1), Controller::BindingName).get();
     }
 
     return 0;
