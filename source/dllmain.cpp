@@ -165,9 +165,9 @@ DWORD WINAPI Init(LPVOID bDelay)
     }
 
     /* Fix texture-mapping bugs */
+    // The texture and Zurg routines run from the ASI's own memory: the game's .text padding is not free in every release (the Polish one keeps translation code there)
     if (iniReader.ReadBoolean(INI_KEY, "TextureFix", true)) {
-        pattern = hook::pattern("DD 45 F4 5B DD 58 10 A1 ?? ?? ?? ?? C9 C3"); //4DBD3D
-        char textureFix[] = {0x8B, 0xD1,
+        static char textureFix[] = {0x8B, 0xD1,
                              0xC1, 0xE9, 0x02,
                              0x56,
                              0x51,
@@ -189,11 +189,10 @@ DWORD WINAPI Init(LPVOID bDelay)
                              0x59,
                              0x5E,
                              0xC3};
-        injector::WriteMemoryRaw(pattern.get_first(0x1E), textureFix, sizeof(textureFix), true);
+        injector::ProtectMemory(textureFix, sizeof(textureFix), PAGE_EXECUTE_READWRITE);
 
         auto textureJump = hook::pattern("8B D1 C1 E9 02 F3 A5 8B CA EB AB"); //4B300E
-        injector::WriteMemory<uint8_t>(textureJump.get_first(0), '\xE8', true);
-        injector::WriteMemory(textureJump.get_first(1), (int)pattern.get_first(0x1E) - (int)textureJump.get_first(5), true);
+        injector::MakeCALL(textureJump.get_first(0), textureFix);
     }
 
     /* Fix broken disk launcher at 60 FPS */
@@ -205,30 +204,24 @@ DWORD WINAPI Init(LPVOID bDelay)
 
     /* Fix fast Zurg and other flying enemies at 60 FPS */
     if (iniReader.ReadBoolean(INI_KEY, "ZurgFix", true)) {
-        pattern = hook::pattern("DD 45 F4 5B DD 58 10 A1 ?? ?? ?? ?? C9 C3"); //4DBD3D
-
         auto zurgXJump = hook::pattern("C1 FB 04 2B CB 8B 5C 24 24 89 0E"); //407F8E
-        char zurgXFix[] = {0x0F, 0xAF, 0x1D, *zurgXJump.get_first<char>(0x88), *zurgXJump.get_first<char>(0x89), *zurgXJump.get_first<char>(0x8A), *zurgXJump.get_first<char>(0x8B),
+        static char zurgXFix[] = {0x0F, 0xAF, 0x1D, *zurgXJump.get_first<char>(0x88), *zurgXJump.get_first<char>(0x89), *zurgXJump.get_first<char>(0x8A), *zurgXJump.get_first<char>(0x8B),
                            0xC1, 0xFB, 0x05,
                            0x29, 0xD9,
                            0xC3,
                            0x90};
 
         auto zurgZJump = hook::pattern("C1 FA 04 2B CA 89 4E 08 0F BF 46 0E"); //407FB0
-        char zurgZFix[] = {0x0F, 0xAF, 0x15, *zurgXJump.get_first<char>(0x88), *zurgXJump.get_first<char>(0x89), *zurgXJump.get_first<char>(0x8A), *zurgXJump.get_first<char>(0x8B),
+        static char zurgZFix[] = {0x0F, 0xAF, 0x15, *zurgXJump.get_first<char>(0x88), *zurgXJump.get_first<char>(0x89), *zurgXJump.get_first<char>(0x8A), *zurgXJump.get_first<char>(0x8B),
                            0xC1, 0xFA, 0x05,
                            0x29, 0xD1,
                            0xC3,
                            0x90};
 
-        injector::WriteMemoryRaw(pattern.get_first(0x70), zurgXFix, sizeof(zurgXFix), true);
-        injector::WriteMemoryRaw(pattern.get_first(0x8E), zurgZFix, sizeof(zurgZFix), true);
-
-        injector::WriteMemory<uint8_t>(zurgXJump.get_first(0), '\xE8', true);
-        injector::WriteMemory(zurgXJump.get_first(1), (int)pattern.get_first(0x70) - (int)zurgXJump.get_first(5), true);
-
-        injector::WriteMemory<uint8_t>(zurgZJump.get_first(0), '\xE8', true);
-        injector::WriteMemory(zurgZJump.get_first(1), (int)pattern.get_first(0x8E) - (int)zurgZJump.get_first(5), true);
+        injector::ProtectMemory(zurgXFix, sizeof(zurgXFix), PAGE_EXECUTE_READWRITE);
+        injector::ProtectMemory(zurgZFix, sizeof(zurgZFix), PAGE_EXECUTE_READWRITE);
+        injector::MakeCALL(zurgXJump.get_first(0), zurgXFix);
+        injector::MakeCALL(zurgZJump.get_first(0), zurgZFix);
     }
 
     return 0;
