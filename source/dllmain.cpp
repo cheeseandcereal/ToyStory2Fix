@@ -294,6 +294,16 @@ DWORD WINAPI Init(LPVOID bDelay)
         injector::MakeCALL(zurgZJump.get_first(0), zurgZFix);
     }
 
+    /* Replay the Tarmac helicopter cutscene on each level visit */
+    if (iniReader.ReadBoolean(INI_KEY, "TarmacCutsceneFix", true)) {
+        pattern = hook::pattern("A1 ? ? ? ? 3B C3 0F 8C ? ? ? ? 75 ? 8D 4C 24 28 51 6A 74 E8 ? ? ? ? 6A 20 8D 54 24 34 68 2C 01 00 00 52 E8 ? ? ? ?"); //42E899
+        auto helicopterTimer = *pattern.get_first<int32_t*>(1);
+
+        // Use the unused rotation-component zero store to reset the timer on level load
+        pattern = hook::pattern("89 35 ? ? ? ? D1 F8 A3 ? ? ? ? A3 ? ? ? ? 89 35 ? ? ? ? 89 35 ? ? ? ? E8 ? ? ? ? 83 C4 38"); //42E6BC
+        injector::WriteMemory(pattern.get_first(2), helicopterTimer, true);
+    }
+
     /* Make first-person Up look up and Down look down */
     if (iniReader.ReadBoolean(INI_KEY, "UninvertCamera", true)) {
         pattern = hook::pattern("C7 05 ? ? ? ? 00 00 00 00 8B 6C 24 48 8B C3 0F AF C6"); //403FB3
