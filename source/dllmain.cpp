@@ -294,6 +294,20 @@ DWORD WINAPI Init(LPVOID bDelay)
         injector::MakeCALL(zurgZJump.get_first(0), zurgZFix);
     }
 
+    /* Reset the Airport Infiltration fan cycle on each level load */
+    if (iniReader.ReadBoolean(INI_KEY, "ConsistentAiportFans", true)) {
+        pattern = hook::pattern("8B 0D ? ? ? ? 8D 04 52 8D 04 41 8B 0D ? ? ? ? 25 FF 0F 00 00 3D 00 08 00 00 A3 ? ? ? ?"); //42CAF3
+        auto fanPhase = *pattern.get_first<int32_t*>(2);
+        auto fanSpeed = *pattern.get_first<int32_t*>(14);
+
+        // Reuse two unused scalar stores in the level initializer
+        pattern = hook::pattern("C7 05 ? ? ? ? 00 FE FF FF C7 05 ? ? ? ? 00 02 00 00"); //42C98E
+        injector::WriteMemory(pattern.get_first(2), fanPhase, true);
+        injector::WriteMemory<int32_t>(pattern.get_first(6), 0, true);
+        injector::WriteMemory(pattern.get_first(12), fanSpeed, true);
+        injector::WriteMemory<int32_t>(pattern.get_first(16), 0, true);
+    }
+
     /* Replay the Tarmac helicopter cutscene on each level visit */
     if (iniReader.ReadBoolean(INI_KEY, "TarmacCutsceneFix", true)) {
         pattern = hook::pattern("A1 ? ? ? ? 3B C3 0F 8C ? ? ? ? 75 ? 8D 4C 24 28 51 6A 74 E8 ? ? ? ? 6A 20 8D 54 24 34 68 2C 01 00 00 52 E8 ? ? ? ?"); //42E899
