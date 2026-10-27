@@ -320,7 +320,6 @@ DWORD WINAPI Init(LPVOID bDelay)
         pattern = hook::pattern("A3 ? ? ? ? 89 0D ? ? ? ? 66 89 3D ? ? ? ? 5F 5E 5D 5B C3"); //414DF4
         Controller::movement = *pattern.get_first<int32_t*>(1);
         pattern = hook::pattern("68 ? ? ? ? 6A 50 50 8B 08 FF 51 24"); //414C47
-        Controller::joystick = *pattern.get_first<DIJOYSTATE*>(1);
         injector::MakeCALL(pattern.get_first(8), Controller::ReadJoystick); // replaces mov ecx,[eax]; call [ecx+24h] (GetDeviceState)
 
         // Default bindings: Cancel on button 1 (shared with Laser), Menu on Start (button 7), camera on the right stick instead of buttons 6/7
@@ -351,8 +350,6 @@ DWORD WINAPI Init(LPVOID bDelay)
         // Operate the controls menu with the controller
         pattern = hook::pattern("89 15 ? ? ? ? 7D 0D BA 80 00 00 00"); //414DA7
         Controller::directions = *pattern.get_first<uint32_t*>(2);
-        pattern = hook::pattern("39 1D ? ? ? ? 0F 85 D8 01 00 00"); //49C73F
-        Controller::capturing = *pattern.get_first<uint32_t*>(2);
         pattern = hook::pattern("3B E8 75 09 E8 ? ? ? ? 89 44 24 ?"); //43777E; the stack slot differs between regional builds
         Controller::configure = injector::MakeCALL(pattern.get_first(4), Controller::Configure).get();
         uintptr_t configure = (uintptr_t)Controller::configure; //49C420

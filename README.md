@@ -9,7 +9,7 @@ Toy Story 2 Fix is a program that fixes and enhances Toy Story 2 for the PC. Fea
 * Works on every regional release of the game.
 * Skips the graphics picker and starts in borderless fullscreen or a resizable window at a chosen resolution.
 * Makes first-person Up look up and Down look down.
-* Better controller support: right stick camera, bindable D-pad, controller use in the controls menu and shared bindings.
+* Better controller support: right stick camera, bindable D-pad and triggers, controller use in the controls menu and shared bindings.
 
 # Download
 Get the latest version [from the releases page](https://github.com/cheeseandcereal/ToyStory2Fix/releases/latest). Extract the ZIP file into the folder you installed Toy Story 2 into.
